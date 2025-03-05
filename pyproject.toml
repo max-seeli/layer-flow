@@ -1,0 +1,23 @@
+[project]
+name = "layer-flow"
+version = "0.1.0"
+description = " Deep learning without training "
+readme = "README.md"
+authors = [
+    { name = "Max Seeliger", email = "maximilian.seeliger@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "jax>=0.5.2",
+    "matplotlib>=3.10.1",
+    "pyqt6>=6.8.1",
+    "scikit-learn>=1.6.1",
+    "tqdm>=4.67.1",
+]
+
+[project.scripts]
+layer-flow = "layer_flow:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
