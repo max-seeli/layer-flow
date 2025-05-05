@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def kmeans_plus_plus_init(points, k, seed=None):
+def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None):
     """
     Selects initial cluster centers using k-means++ initialization method.
 
@@ -33,7 +33,7 @@ def kmeans_plus_plus_init(points, k, seed=None):
         distance_to_nearest_center = np.min(squared_distances, axis=1)  # (n_samples,)
 
         # Step 3: Choose next center with probability proportional to the squared distances
-        probabilities = distance_to_nearest_center / distance_to_nearest_center.sum()
+        probabilities = distance_to_nearest_center / np.sum(distance_to_nearest_center)
         next_center_index = np.random.choice(n_samples, p=probabilities)
 
         centers[i] = points[next_center_index]
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     plt.scatter(
         X[y == 1, 0],
         X[y == 1, 1],
-        c="indigo",
+        c="goldenrod",
         label="Class 1",
         alpha=0.7,
         edgecolors="k",
