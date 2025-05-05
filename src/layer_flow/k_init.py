@@ -1,0 +1,96 @@
+import numpy as np
+
+
+def kmeans_plus_plus_init(points, k, seed=None):
+    """
+    Selects initial cluster centers using k-means++ initialization method.
+
+    Args:
+        points (np.ndarray): points of the dataset; shape (n_samples, n_features)
+        k (int): number of clusters
+        seed (int, optional): random seed for reproducibility
+
+    Returns:
+        np.ndarray: selected initial centers; shape (k, n_features)
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    n_samples, n_features = points.shape
+    centers = np.empty((k, n_features))
+
+    # Step 1: Randomly choose the first center
+    centers[0] = points[np.random.randint(n_samples)]
+
+    for i in range(1, k):
+        # Step 2: Compute squared distances to the nearest center
+        distances_per_axis = (  # (n_samples, i, n_features)
+            points[:, np.newaxis] - centers[:i]
+        )
+        squared_distances = (  # (n_samples, i)
+            np.linalg.norm(distances_per_axis, axis=2) ** 2
+        )
+        distance_to_nearest_center = np.min(squared_distances, axis=1)  # (n_samples,)
+
+        # Step 3: Choose next center with probability proportional to the squared distances
+        probabilities = distance_to_nearest_center / distance_to_nearest_center.sum()
+        next_center_index = np.random.choice(n_samples, p=probabilities)
+
+        centers[i] = points[next_center_index]
+
+    return centers
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from sklearn.datasets import make_moons
+
+    seed = 0
+    X, y = make_moons(n_samples=100, noise=0.1, random_state=seed)
+
+    centroids = kmeans_plus_plus_init(X, 4, seed)
+
+    plt.figure(figsize=(10, 7))
+    plt.scatter(
+        X[y == 0, 0],
+        X[y == 0, 1],
+        c="teal",
+        label="Class 0",
+        alpha=0.7,
+        edgecolors="k",
+        s=80,
+        linewidths=1,
+    )
+    plt.scatter(
+        X[y == 1, 0],
+        X[y == 1, 1],
+        c="indigo",
+        label="Class 1",
+        alpha=0.7,
+        edgecolors="k",
+        s=80,
+        linewidths=1,
+    )
+    plt.scatter(
+        centroids[:, 0],
+        centroids[:, 1],
+        c="None",
+        marker="o",
+        s=140,
+        label="Centroids",
+        edgecolors="red",
+        linewidths=4,
+    )
+    plt.title("K-means++ Initialization on Moons Dataset", fontsize=24)
+    plt.xlabel("Feature 1", fontsize=12)
+    plt.ylabel("Feature 2", fontsize=12)
+    plt.grid(True, linestyle="--", alpha=0.3)
+    plt.legend(frameon=True, fontsize=10, loc="upper right")
+
+    ax = plt.gca()
+    ax.set_axisbelow(True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.tight_layout()
+    plt.show()
