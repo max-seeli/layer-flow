@@ -12,28 +12,31 @@ def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None):
 
     Returns:
         np.ndarray: selected initial centers; shape (k, n_features)
+
+    Notes:
+        This implementation runs in O(n*k*d) time, where n is the number of samples,
+        k is the number of clusters, and d is the number of features.
     """
     if seed is not None:
         np.random.seed(seed)
 
     n_samples, n_features = points.shape
     centers = np.empty((k, n_features))
+    min_squared_distances = np.full((n_samples,), np.inf)
 
     # Step 1: Randomly choose the first center
     centers[0] = points[np.random.randint(n_samples)]
 
     for i in range(1, k):
-        # Step 2: Compute squared distances to the nearest center
-        distances_per_axis = (  # (n_samples, i, n_features)
-            points[:, np.newaxis] - centers[:i]
+        # Step 2: Compute squared distances to new center
+        distance_per_axis = (  # (n_samples, n_features)
+            points - centers[i - 1]
         )
-        squared_distances = (  # (n_samples, i)
-            np.linalg.norm(distances_per_axis, axis=2) ** 2
-        )
-        distance_to_nearest_center = np.min(squared_distances, axis=1)  # (n_samples,)
-
+        squared_distance = np.linalg.norm(distance_per_axis, axis=1) ** 2  # (n_samples,)
+        min_squared_distances = np.minimum(min_squared_distances, squared_distance) # (n_samples,)
+        
         # Step 3: Choose next center with probability proportional to the squared distances
-        probabilities = distance_to_nearest_center / np.sum(distance_to_nearest_center)
+        probabilities = min_squared_distances / np.sum(min_squared_distances)
         next_center_index = np.random.choice(n_samples, p=probabilities)
 
         centers[i] = points[next_center_index]
