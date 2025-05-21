@@ -1,7 +1,8 @@
 import numpy as np
+from tqdm.auto import trange
 
 
-def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None):
+def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None, verbose: bool = False) -> np.ndarray:
     """
     Selects initial cluster centers using k-means++ initialization method.
 
@@ -27,7 +28,8 @@ def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None):
     # Step 1: Randomly choose the first center
     centers[0] = points[np.random.randint(n_samples)]
 
-    for i in range(1, k):
+    iterator = trange(1, k) if verbose else range(1, k)
+    for i in iterator:
         # Step 2: Compute squared distances to new center
         distance_per_axis = (  # (n_samples, n_features)
             points - centers[i - 1]
