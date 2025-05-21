@@ -3,6 +3,7 @@ from typing import List, Tuple, Union, Dict
 
 import jax
 from jax import grad, jit, nn
+from functools import partial
 from jax import numpy as jnp
 from tqdm.auto import trange
 
@@ -13,6 +14,25 @@ from tqdm.auto import trange
 EPSILON = 1e-7
 Parameters = List[Tuple[jnp.ndarray, jnp.ndarray]]
 
+@partial(jit, static_argnums=2)
+def _activation_at_layer(
+    params: Parameters, x: jnp.ndarray, layer: int
+) -> jnp.ndarray:
+    """
+    Computes the activation at a specific layer.
+
+    Args:
+        params (Parameters): List of tuples containing weights and biases for each layer.
+        x (jnp.ndarray): Input data of shape (batch_size, in_dim).
+        layer (int): Layer index (0-indexed) for which to compute the activation. **Must be between 0 and len(params) - 1.**
+
+    Returns:
+        jnp.ndarray: Activation values at the specified layer.
+    """
+    for i in range(layer + 1):
+        w, b = params[i]
+        x = nn.tanh(jnp.dot(x, w) + b)
+    return x
 
 @jit
 def _forward(params: Parameters, x: jnp.ndarray) -> jnp.ndarray:
@@ -26,8 +46,7 @@ def _forward(params: Parameters, x: jnp.ndarray) -> jnp.ndarray:
     Returns:
         jnp.ndarray: Output of the network after applying softmax activation of shape (batch_size, out_dim).
     """
-    for w, b in params[:-1]:
-        x = nn.tanh(jnp.dot(x, w) + b)
+    x = _activation_at_layer(params, x, len(params) - 2)
     w, b = params[-1]
     return nn.softmax(jnp.dot(x, w) + b)
 
@@ -235,6 +254,53 @@ class Network:
             return [labels[i] for i in y_pred]
         else:
             return jnp.argmax(y_pred, axis=1)
+        
+    def pre_activation_at_layer(
+        self, x: jnp.ndarray, layer: int
+    ) -> jnp.ndarray:
+        """
+        Computes the pre-activation values at a specific layer.
+
+        Args:
+            x (jnp.ndarray): Input data of shape (batch_size, in_dim).
+            layer (int): Layer index (0-indexed) for which to compute the pre-activation values.
+
+        Returns:
+            jnp.ndarray: Pre-activation values at the specified layer.
+
+        Raises:
+            ValueError: If the layer index is out of bounds.
+        """
+        if layer < 0 or layer >= len(self.parameters):
+            raise ValueError(f"Layer index {layer} out of bounds.")
+        
+        if layer > 0:
+            x = _activation_at_layer(self.parameters, x, layer - 1)
+        w, b = self.parameters[layer]
+        return jnp.dot(x, w) + b
+    
+    def activation_at_layer(
+        self, x: jnp.ndarray, layer: int
+    ) -> jnp.ndarray:
+        """
+        Computes the activation values at a specific layer.
+
+        Args:
+            x (jnp.ndarray): Input data of shape (batch_size, in_dim).
+            layer (int): Layer index (0-indexed) for which to compute the activation values.
+
+        Returns:
+            jnp.ndarray: Activation values at the specified layer.
+
+        Raises:
+            ValueError: If the layer index is out of bounds.
+        """
+        if layer < 0 or layer >= len(self.parameters):
+            raise ValueError(f"Layer index {layer} out of bounds.")
+        
+        if layer == len(self.parameters) - 1:
+            return _forward(self.parameters, x)
+        return _activation_at_layer(self.parameters, x, layer)
 
     @property
     def parameters(self) -> Parameters:
@@ -254,6 +320,13 @@ class Network:
         Setter for fully replacing the parameters of the network.
         """
         self._parameters = params
+
+    @property
+    def n_layers(self) -> int:
+        """
+        Number of layers in the network.
+        """
+        return len(self.parameters)
 
     @property
     def dims(self) -> List[int]:
