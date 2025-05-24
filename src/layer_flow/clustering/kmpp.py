@@ -2,15 +2,17 @@ import numpy as np
 from tqdm.auto import trange
 
 
-def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None, verbose: bool = False) -> np.ndarray:
+def kmpp(points: np.ndarray, k: int, seed: int = None, verbose: bool = False) -> np.ndarray:
     """
-    Selects initial cluster centers using k-means++ initialization method.
+    Selects cluster centers using k-means++ initialization method.
 
     Args:
         points (np.ndarray): points of the dataset; shape (n_samples, n_features)
         k (int): number of clusters
         seed (int, optional): random seed for reproducibility
-
+        verbose (bool, optional): if True, show progress bar
+            Default is False.
+    
     Returns:
         np.ndarray: selected initial centers; shape (k, n_features)
 
@@ -47,55 +49,13 @@ def kmeans_plus_plus_init(points: np.ndarray, k: int, seed: np.ndarray = None, v
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    from sklearn.datasets import make_moons
+    from sklearn.datasets import make_blobs
+    from layer_flow.clustering.draw import plot_cluster_hulls
 
     seed = 0
-    X, y = make_moons(n_samples=100, noise=0.1, random_state=seed)
-
-    centroids = kmeans_plus_plus_init(X, 4, seed)
-
-    plt.figure(figsize=(10, 7))
-    plt.scatter(
-        X[y == 0, 0],
-        X[y == 0, 1],
-        c="teal",
-        label="Class 0",
-        alpha=0.7,
-        edgecolors="k",
-        s=80,
-        linewidths=1,
-    )
-    plt.scatter(
-        X[y == 1, 0],
-        X[y == 1, 1],
-        c="goldenrod",
-        label="Class 1",
-        alpha=0.7,
-        edgecolors="k",
-        s=80,
-        linewidths=1,
-    )
-    plt.scatter(
-        centroids[:, 0],
-        centroids[:, 1],
-        c="None",
-        marker="o",
-        s=140,
-        label="Centroids",
-        edgecolors="red",
-        linewidths=4,
-    )
-    plt.title("K-means++ Initialization on Moons Dataset", fontsize=24)
-    plt.xlabel("Feature 1", fontsize=12)
-    plt.ylabel("Feature 2", fontsize=12)
-    plt.grid(True, linestyle="--", alpha=0.3)
-    plt.legend(frameon=True, fontsize=10, loc="upper right")
-
-    ax = plt.gca()
-    ax.set_axisbelow(True)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
-    plt.tight_layout()
-    plt.show()
+    X, y = make_blobs(n_samples=1000, n_features=2, centers=6, random_state=seed)
+    
+    k = 6
+    centroids = kmpp(X, k, seed)
+    
+    plot_cluster_hulls(X, centroids, y)
