@@ -3,6 +3,7 @@ This module contains an abstract class for classification datasets, and
 provides a uniform way to load datasets from different sources for local
 experiments.
 """
+
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, Type
 
@@ -31,6 +32,7 @@ class BaseDataset(ABC):
         X_test (iterable): The testing input data.
         y_test (iterable): The testing target labels.
     """
+
     name: str
     X: np.ndarray
     y: np.ndarray
@@ -41,7 +43,13 @@ class BaseDataset(ABC):
     X_test: np.ndarray
     y_test: np.ndarray
 
-    def __init__(self, name: str, train_size: float = 0.7, validation_size: float = 0.1):
+    def __init__(
+        self,
+        name: str,
+        train_size: float = 0.7,
+        validation_size: float = 0.1,
+        one_hot: bool = True,
+    ):
         """
         Initialize the dataset with a name.
 
@@ -51,12 +59,14 @@ class BaseDataset(ABC):
                 training set. Default is 0.7.
             validation_size (float): The proportion of the dataset to include in
                 the validation set. Default is 0.1.
-            **kwargs: Additional keyword arguments to be passed to the
-                `load` method.
+            one_hot (bool): If True, the target labels will be one-hot encoded.
+                Default is True.
         """
         self.name = name
 
         self.load()
+        if one_hot:
+            self.y = one_hot_encode(self.y)
         self.split(train_size, validation_size)
 
     @property
@@ -98,8 +108,7 @@ class BaseDataset(ABC):
         )
 
         # Calculate the adjusted validation size
-        adjusted_validation_size = validation_size / \
-            (train_size + validation_size)
+        adjusted_validation_size = validation_size / (train_size + validation_size)
 
         # Split the training set into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
@@ -112,11 +121,9 @@ class BaseDataset(ABC):
         self.X_test, self.y_test = X_test, y_test
 
 
-
 # -----------------------------------------------------------
 # Utility functions for loading datasets
 # -----------------------------------------------------------
-
 def one_hot_encode(y):
     """
     One-hot encode the target labels.
@@ -146,21 +153,22 @@ class DatasetFactory:
     def register(cls, name: str) -> Callable[[Type[BaseDataset]], Type[BaseDataset]]:
         """
         Decorator to register a dataset class with a name.
-        
+
         Args:
             name (str): The name of the dataset.
         """
+
         def decorator(dataset_class: Type[BaseDataset]) -> Type[BaseDataset]:
             cls._registry[name] = dataset_class
             return dataset_class
 
         return decorator
-    
+
     @classmethod
     def create(cls, name: str, **kwargs) -> BaseDataset:
         """
         Create an instance of a registered dataset class.
-        
+
         Args:
             name (str): The name of the dataset.
             **kwargs: Additional keyword arguments to be passed to the
@@ -174,57 +182,82 @@ class DatasetFactory:
 
 @DatasetFactory.register("moons")
 class MoonsDataset(BaseDataset):
-
-    def __init__(self, n: int = 1000, noise: float = 0.1, random_state: int = 42):
-        
+    def __init__(
+        self, n: int = 1000, noise: float = 0.1, random_state: int = 42, **kwargs
+    ):
         self.n = n
         self.noise = noise
         self.random_state = random_state
-        super().__init__(name="moons")
+        super().__init__(name="moons", **kwargs)
 
     def load(self):
         from sklearn.datasets import make_moons
 
-        self.X, self.y = make_moons(n_samples=self.n, noise=self.noise, random_state=self.random_state)
-        self.y = one_hot_encode(self.y)
-    
+        self.X, self.y = make_moons(
+            n_samples=self.n, noise=self.noise, random_state=self.random_state
+        )
+
+
+@DatasetFactory.register("blobs")
+class BlobsDataset(BaseDataset):
+    def __init__(
+        self,
+        n: int = 1000,
+        dim: int = 2,
+        num_blobs: int = 6,
+        random_state: int = 42,
+        **kwargs,
+    ):
+        self.n = n
+        self.dim = dim
+        self.num_blobs = num_blobs
+        self.random_state = random_state
+        super().__init__(name="blobs", **kwargs)
+
+    def load(self):
+        from sklearn.datasets import make_blobs
+
+        self.X, self.y = make_blobs(
+            n_samples=self.n,
+            n_features=self.dim,
+            centers=self.num_blobs,
+            random_state=self.random_state,
+        )
+
 
 @DatasetFactory.register("circles")
 class CirclesDataset(BaseDataset):
-
-    def __init__(self, n: int = 1000, noise: float = 0.1, random_state: int = 42):
-        
+    def __init__(
+        self, n: int = 1000, noise: float = 0.1, random_state: int = 42, **kwargs
+    ):
         self.n = n
         self.noise = noise
         self.random_state = random_state
-        super().__init__(name="circles")
-
+        super().__init__(name="circles", **kwargs)
 
     def load(self):
         from sklearn.datasets import make_circles
 
-        self.X, self.y = make_circles(n_samples=self.n, noise=self.noise, random_state=self.random_state)
-        self.y = one_hot_encode(self.y)
+        self.X, self.y = make_circles(
+            n_samples=self.n, noise=self.noise, random_state=self.random_state
+        )
 
 
 @DatasetFactory.register("iris")
 class IrisDataset(BaseDataset):
-
-    def __init__(self):
-        super().__init__(name="iris")
+    def __init__(self, **kwargs):
+        super().__init__(name="iris", **kwargs)
 
     def load(self):
         from sklearn.datasets import load_iris
 
         self.X, self.y = load_iris(return_X_y=True)
-        self.y = one_hot_encode(self.y)
 
 
 @DatasetFactory.register("mnist")
 class MNISTDataset(BaseDataset):
-
-    def __init__(self):
-        super().__init__(name="mnist")
+    def __init__(self, **kwargs):
+        super().__init__(name="mnist", **kwargs)
 
     def load(self):
         from sklearn.datasets import fetch_openml
@@ -233,23 +266,20 @@ class MNISTDataset(BaseDataset):
         self.X = mnist.data.to_numpy().astype(np.float32)
         self.X = self.X / 255.0
         self.y = mnist.target.to_numpy()
-        self.y = one_hot_encode(self.y)
 
 
 @DatasetFactory.register("rice")
 class RiceDataset(BaseDataset):
-
-    def __init__(self):
-        super().__init__(name="rice")
+    def __init__(self, **kwargs):
+        super().__init__(name="rice", **kwargs)
 
     def load(self):
-        from ucimlrepo import fetch_ucirepo 
+        from ucimlrepo import fetch_ucirepo
 
         rice = fetch_ucirepo(id=545)
         self.X = rice.data.features.to_numpy()
         self.y = rice.data.targets.to_numpy()
-        self.y = one_hot_encode(self.y)
-        
+
 
 if __name__ == "__main__":
     ds = MNISTDataset()

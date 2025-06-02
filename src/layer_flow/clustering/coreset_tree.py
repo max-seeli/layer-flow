@@ -1,10 +1,10 @@
-"""
-This module implements the Coreset Tree algorithm for clustering.
-"""
 from __future__ import annotations
+
+from typing import Tuple, Union
+
 import numpy as np
-from tqdm.auto import trange
-from typing import Tuple
+from tqdm import trange
+
 
 class CoresetNode:
     """
@@ -58,15 +58,16 @@ class CoresetNode:
 
         Returns:
             np.ndarray: chosen point; shape (n_features, )
+            int: index of the chosen point in the original points array
         """
         costs = np.linalg.norm(self.points - self.rep, axis=1) ** 2
         probabilities = costs / np.sum(costs) 
 
         chosen_idx = np.random.choice(len(self.points), p=probabilities)
         chosen_point = self.points[chosen_idx]
-        return chosen_point
+        return chosen_point, chosen_idx
     
-    def split(self, point):
+    def split(self, point: np.ndarray):
         """
         Split the node into two child nodes representing the newly chosen point and the representative point.
 
@@ -94,7 +95,7 @@ class CoresetNode:
         self.weight = new_weight
 
         
-    def _update_weight(self, delta_weight):
+    def _update_weight(self, delta_weight: float):
         """
         Update the weight of the node and propagate the change to the parent.
 
@@ -106,7 +107,7 @@ class CoresetNode:
             self.parent._update_weight(delta_weight)
 
 
-def coreset_tree_root(points: np.ndarray, k: int, seed: int = None, verbose: bool = False) -> Tuple[CoresetNode, np.ndarray]:
+def coreset_tree_root(points: np.ndarray, k: int, seed: int = None, verbose: bool = False, index: bool = False) -> Union[Tuple[CoresetNode, np.ndarray], Tuple[CoresetNode, np.ndarray, np.ndarray]]:
     """
     Build a coreset tree for the given points.
     
@@ -117,23 +118,32 @@ def coreset_tree_root(points: np.ndarray, k: int, seed: int = None, verbose: boo
             Default is None.
         verbose (bool, optional): if True, show progress bar
             Default is False.
+        index (bool, optional): if True, return the indices of the selected points
+            Default is False.
     
     Returns:
         Tuple[CoresetNodeNew, np.ndarray]: tuple containing the root of the coreset tree and the selected points
             - root (CoresetNodeNew): root of the coreset tree
             - centers (np.ndarray): selected points; shape (k, n_features)
+        or
+        Tuple[CoresetNodeNew, np.ndarray, np.ndarray]: tuple containing the root of the coreset tree, the selected points, and their indices
+            - root (CoresetNodeNew): root of the coreset tree
+            - centers (np.ndarray): selected points; shape (k, n_features)
+            - indices (np.ndarray): indices of the selected points; shape (k, )
     """
     if seed is not None:
         np.random.seed(seed)
     
-    # Choose a random first point
-    first_point = points[np.random.randint(len(points))]
     
-    centers = [first_point]
-    root = CoresetNode(points, first_point)
+    centers_idx = np.empty((k,), dtype=int)
+
+    # Choose a random first point
+    centers_idx[0] = np.random.randint(len(points))
+
+    root = CoresetNode(points, points[centers_idx[0]])
 
     iterator = trange(1, k) if verbose else range(1, k)
-    for _ in iterator:
+    for i in iterator:
         
         # Choose a leaf node by recursively choosing a child with probability
         #  proportional to its weight
@@ -142,16 +152,20 @@ def coreset_tree_root(points: np.ndarray, k: int, seed: int = None, verbose: boo
         # Choose a point from the set of points represented by the leaf node
         #  with probability proportional to the cost of the point w.r.t. the
         #  representative point of the leaf node
-        chosen_point = leaf.choose_point()
-        centers.append(chosen_point)
+        chosen_point, chosen_idx = leaf.choose_point()
+        centers_idx[i] = chosen_idx
 
         # Split the leaf node into two child nodes, one with the newly chosen
         #  point and the other with the representative point
         leaf.split(chosen_point)
 
-    return root, np.array(centers)
+    centers = points[centers_idx]
+    if index:
+        return root, centers, centers_idx
+    else:
+        return root, centers
 
-def coreset_tree(points: np.ndarray, k: int, seed: int = None, verbose: bool = False) -> np.ndarray:
+def coreset_tree(points: np.ndarray, k: int, seed: int = None, verbose: bool = False, index: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Build a coreset for the given points.
     
@@ -165,19 +179,28 @@ def coreset_tree(points: np.ndarray, k: int, seed: int = None, verbose: bool = F
     
     Returns:
         np.ndarray: selected coreset points; shape (k, n_features)
+        or
+        Tuple[np.ndarray, np.ndarray]: tuple containing the selected coreset points and their indices
+            - centers (np.ndarray): selected coreset points; shape (k, n_features)
+            - indices (np.ndarray): indices of the selected coreset points; shape (k, )
     """
-    _, centers = coreset_tree_root(points, k, seed, verbose)
-    return centers
+    results = coreset_tree_root(points, k, seed, verbose, index)
+    if index:
+        centers, indices = results[1], results[2]
+        return centers, indices
+    else:
+        centers = results[1]
+        return centers
 
 if __name__ == "__main__":
-    from sklearn.datasets import make_blobs
     from layer_flow.clustering.draw import plot_cluster_hulls
+    from layer_flow.data import DatasetFactory
 
     seed = 0
-    X, y = make_blobs(n_samples=1000, n_features=2, centers=6, random_state=seed)
-    
     k = 6
-    centroids = coreset_tree(X, k, seed, verbose=True)
-    
-    plot_cluster_hulls(X, centroids, y)
+    ds = DatasetFactory.create("blobs", num_blobs=k, one_hot=False, random_state=seed)
 
+    X, y = ds.X, ds.y
+    centroids = coreset_tree(X, k, seed)
+
+    plot_cluster_hulls(X, centroids, y)

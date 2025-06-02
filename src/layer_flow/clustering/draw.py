@@ -5,14 +5,14 @@ convex hulls of clusters and Voronoi diagrams. It is designed to work with
 2D data and can be used to enhance the interpretability of clustering
 algorithms.
 
-Examples: 
+Examples:
 ```
 from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 
 from layer_flow.clustering.draw import plot_cluster_hulls
 
-    
+
 # Generate synthetic data
 X, y = make_blobs(n_samples=1000, n_features=2, centers=6)
 
@@ -20,16 +20,74 @@ X, y = make_blobs(n_samples=1000, n_features=2, centers=6)
 kmeans = KMeans(n_clusters=6, random_state=seed)
 kmeans.fit(X)
 centroids = kmeans.cluster_centers_
-    
+
 # Plot clustering results
 plot_cluster_hulls(X, centroids, y)
 ```
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.collections import LineCollection
 from scipy.spatial import ConvexHull, Voronoi
+
+
+def plot_cluster_costs(points, centers, costs, ax=None):
+    """
+    Plot the points of the dataset with colors indicating their cost to the nearest center.
+
+    Args:
+        points (np.ndarray): points of the dataset; shape (n_samples, n_features)
+        centers (np.ndarray): predicted cluster centers; shape (k, n_features)
+        costs (np.ndarray): cost of each point to the nearest center; shape (n_samples,)
+        ax (matplotlib.axes.Axes, optional): axes to plot on
+            Default is None, which creates a new figure and axes.
+    """
+    owns_fig = False
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 7))
+        owns_fig = True
+
+    # Normalize costs for color mapping
+    norm_costs = (costs - np.min(costs)) / (np.max(costs) - np.min(costs))
+
+    scatter = ax.scatter(
+        points[:, 0],
+        points[:, 1],
+        c=norm_costs,
+        cmap="viridis",
+        s=10,
+        alpha=0.8,
+    )
+
+    # Plot centers
+    ax.scatter(
+        centers[:, 0],
+        centers[:, 1],
+        c="None",
+        marker="o",
+        s=140,
+        label="Centers",
+        edgecolors="red",
+        linewidths=2,
+        alpha=0.8,
+    )
+
+    ax.set_xlabel("Feature 1", fontsize=12)
+    ax.set_ylabel("Feature 2", fontsize=12)
+
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.set_axisbelow(True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(fontsize=12)
+
+    plt.colorbar(scatter, label="Cost to Nearest Center")
+
+    if owns_fig:
+        plt.tight_layout()
+        plt.show()
 
 
 def plot_cluster_hulls(points, centers, labels, ax=None):
