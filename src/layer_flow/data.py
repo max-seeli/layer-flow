@@ -70,6 +70,16 @@ class BaseDataset(ABC):
         self.split(train_size, validation_size)
 
     @property
+    def n_features(self):
+        """
+        Get the number of features in the dataset.
+
+        Returns:
+            int: The number of features in the dataset.
+        """
+        return self.X.shape[1] if len(self.X.shape) > 1 else 1
+
+    @property
     def n_classes(self):
         """
         Get the number of classes in the dataset.
@@ -268,6 +278,23 @@ class MNISTDataset(BaseDataset):
         self.y = mnist.target.to_numpy()
 
 
+@DatasetFactory.register("cifar10")
+class CIFAR10Dataset(BaseDataset):
+    def __init__(self, **kwargs):
+        super().__init__(name="cifar10", **kwargs)
+
+    def load(self):
+        import torchvision.datasets as datasets
+        import numpy as np
+
+        cifar10 = datasets.CIFAR10(root="./data", train=True, download=True)
+        self.X = np.array(cifar10.data).astype(np.float32)
+        self.X = self.X / 255.0  # Normalize to [0, 1]
+        self.X = self.X.reshape(self.X.shape[0], -1)  # Flatten the images
+        self.y = np.array(cifar10.targets).astype(np.int64)
+        
+
+
 @DatasetFactory.register("rice")
 class RiceDataset(BaseDataset):
     def __init__(self, **kwargs):
@@ -282,7 +309,7 @@ class RiceDataset(BaseDataset):
 
 
 if __name__ == "__main__":
-    ds = MNISTDataset()
+    ds = CIFAR10Dataset()
     print(ds.X.shape, ds.X.dtype)
     print(ds.y.shape, ds.y.dtype)
     print(f"Train: {ds.X_train.shape}, {ds.y_train.shape}")
