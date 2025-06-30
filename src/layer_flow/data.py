@@ -5,11 +5,14 @@ experiments.
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Type
+from typing import Callable, Dict, Type, Union
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+
+import torch
+from torch.utils.data import TensorDataset
 
 
 class BaseDataset(ABC):
@@ -118,7 +121,8 @@ class BaseDataset(ABC):
         )
 
         # Calculate the adjusted validation size
-        adjusted_validation_size = validation_size / (train_size + validation_size)
+        adjusted_validation_size = validation_size / \
+            (train_size + validation_size)
 
         # Split the training set into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
@@ -129,6 +133,42 @@ class BaseDataset(ABC):
         self.X_train, self.y_train = X_train, y_train
         self.X_val, self.y_val = X_val, y_val
         self.X_test, self.y_test = X_test, y_test
+
+    def get_torch(self, split: bool = False) -> Union[TensorDataset, Dict[str, TensorDataset]]:
+        """
+        Get a PyTorch dataset.
+
+        Args:
+            split (bool): If True, returns a dictionary with training, validation,
+                and testing datasets. If False, returns a single TensorDataset
+                containing the entire dataset.
+        Returns:
+            Union[TensorDataset, Dict[str, TensorDataset]]: A PyTorch dataset or a
+                dictionary of datasets.
+        """
+        if split:
+            train_dataset = TensorDataset(
+                torch.tensor(self.X_train, dtype=torch.float32),
+                torch.tensor(self.y_train, dtype=torch.float32),
+            )
+            val_dataset = TensorDataset(
+                torch.tensor(self.X_val, dtype=torch.float32),
+                torch.tensor(self.y_val, dtype=torch.float32),
+            )
+            test_dataset = TensorDataset(
+                torch.tensor(self.X_test, dtype=torch.float32),
+                torch.tensor(self.y_test, dtype=torch.float32),
+            )
+            return {
+                "train": train_dataset,
+                "val": val_dataset,
+                "test": test_dataset,
+            }
+        else:
+            return TensorDataset(
+                torch.tensor(self.X, dtype=torch.float32),
+                torch.tensor(self.y, dtype=torch.float32),
+            )
 
 
 # -----------------------------------------------------------
@@ -292,7 +332,6 @@ class CIFAR10Dataset(BaseDataset):
         self.X = self.X / 255.0  # Normalize to [0, 1]
         self.X = self.X.reshape(self.X.shape[0], -1)  # Flatten the images
         self.y = np.array(cifar10.targets).astype(np.int64)
-        
 
 
 @DatasetFactory.register("rice")
