@@ -4,18 +4,18 @@ provides a uniform way to load datasets from different sources for local
 experiments.
 """
 
-from abc import ABC, abstractmethod
 from typing import Callable, Dict, Type, Union
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn import random_projection
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 import torch
 from torch.utils.data import TensorDataset
 
 
-class BaseDataset(ABC):
+class BaseDataset:
     """
     Abstract class for classification datasets.
 
@@ -37,6 +37,9 @@ class BaseDataset(ABC):
     """
 
     name: str
+    train_size: float
+    validation_size: float
+    one_hot: bool
     X: np.ndarray
     y: np.ndarray
     X_train: np.ndarray
@@ -52,6 +55,7 @@ class BaseDataset(ABC):
         train_size: float = 0.7,
         validation_size: float = 0.1,
         one_hot: bool = True,
+        auto_load: bool = True,
     ):
         """
         Initialize the dataset with a name.
@@ -64,13 +68,16 @@ class BaseDataset(ABC):
                 the validation set. Default is 0.1.
             one_hot (bool): If True, the target labels will be one-hot encoded.
                 Default is True.
+            auto_load (bool): If True, the dataset will be loaded automatically
+                upon initialization. Default is True. (Only used for cloning.)
         """
         self.name = name
+        self.train_size = train_size
+        self.validation_size = validation_size
+        self.one_hot = one_hot
 
-        self.load()
-        if one_hot:
-            self.y = one_hot_encode(self.y)
-        self.split(train_size, validation_size)
+        if auto_load:
+            self.load()
 
     @property
     def n_features(self):
@@ -92,16 +99,25 @@ class BaseDataset(ABC):
         """
         return self.y.shape[1] if len(self.y.shape) > 1 else len(np.unique(self.y))
 
-    @abstractmethod
     def load(self):
+        """
+        Loads and prepares the dataset.
+
+        This method sets all class attributes, splits and preprocesses the dataset.
+        """
+        self._load()
+        if self.one_hot:
+            self.y = one_hot_encode(self.y)
+        else:
+            self.y = label_encode(self.y)
+        self.split(self.train_size, self.validation_size)
+
+    def _load(self):
         """
         Load the dataset.
 
         This method sets the `X` and `y` attributes of the dataset instance
         with the input data and target labels, respectively.
-
-        Returns:
-            tuple: A tuple containing the training and testing data.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -121,8 +137,7 @@ class BaseDataset(ABC):
         )
 
         # Calculate the adjusted validation size
-        adjusted_validation_size = validation_size / \
-            (train_size + validation_size)
+        adjusted_validation_size = validation_size / (train_size + validation_size)
 
         # Split the training set into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
@@ -134,7 +149,34 @@ class BaseDataset(ABC):
         self.X_val, self.y_val = X_val, y_val
         self.X_test, self.y_test = X_test, y_test
 
-    def get_torch(self, split: bool = False) -> Union[TensorDataset, Dict[str, TensorDataset]]:
+    def subspace_embedding(self, n_components: int, random_state: int = 42):
+        """
+        Perform subspace embedding on the dataset using random projection.
+
+        Args:
+            n_components (int): The number of components for the random projection.
+
+        Returns:
+            np.ndarray: The transformed dataset with reduced dimensions.
+        """
+        transformer = random_projection.GaussianRandomProjection(
+            n_components=n_components, random_state=random_state
+        )
+        new_X = transformer.fit_transform(self.X)
+        new_ds = BaseDataset(
+            name=f"{self.name}_subspace_{n_components}",
+            train_size=self.train_size,
+            validation_size=self.validation_size,
+            auto_load=False,
+        )
+        new_ds.X = new_X
+        new_ds.y = self.y
+        new_ds.split(self.train_size, self.validation_size)
+        return new_ds
+
+    def get_torch(
+        self, split: bool = False
+    ) -> Union[TensorDataset, Dict[str, TensorDataset]]:
         """
         Get a PyTorch dataset.
 
@@ -185,6 +227,21 @@ def one_hot_encode(y):
         np.ndarray: The one-hot encoded labels.
     """
     encoder = OneHotEncoder(sparse_output=False)
+    y = np.array(y).reshape(-1, 1)
+    return encoder.fit_transform(y)
+
+
+def label_encode(y):
+    """
+    Label encode the target labels.
+
+    Args:
+        y (iterable): The target labels.
+
+    Returns:
+        np.ndarray: The label encoded labels.
+    """
+    encoder = LabelEncoder()
     y = np.array(y).reshape(-1, 1)
     return encoder.fit_transform(y)
 
@@ -240,7 +297,7 @@ class MoonsDataset(BaseDataset):
         self.random_state = random_state
         super().__init__(name="moons", **kwargs)
 
-    def load(self):
+    def _load(self):
         from sklearn.datasets import make_moons
 
         self.X, self.y = make_moons(
@@ -264,7 +321,7 @@ class BlobsDataset(BaseDataset):
         self.random_state = random_state
         super().__init__(name="blobs", **kwargs)
 
-    def load(self):
+    def _load(self):
         from sklearn.datasets import make_blobs
 
         self.X, self.y = make_blobs(
@@ -285,7 +342,7 @@ class CirclesDataset(BaseDataset):
         self.random_state = random_state
         super().__init__(name="circles", **kwargs)
 
-    def load(self):
+    def _load(self):
         from sklearn.datasets import make_circles
 
         self.X, self.y = make_circles(
@@ -298,7 +355,7 @@ class IrisDataset(BaseDataset):
     def __init__(self, **kwargs):
         super().__init__(name="iris", **kwargs)
 
-    def load(self):
+    def _load(self):
         from sklearn.datasets import load_iris
 
         self.X, self.y = load_iris(return_X_y=True)
@@ -309,7 +366,7 @@ class MNISTDataset(BaseDataset):
     def __init__(self, **kwargs):
         super().__init__(name="mnist", **kwargs)
 
-    def load(self):
+    def _load(self):
         from sklearn.datasets import fetch_openml
 
         mnist = fetch_openml("mnist_784", version=1)
@@ -318,12 +375,28 @@ class MNISTDataset(BaseDataset):
         self.y = mnist.target.to_numpy()
 
 
+@DatasetFactory.register("fashion_mnist")
+class FashionMNISTDataset(BaseDataset):
+    def __init__(self, **kwargs):
+        super().__init__(name="fashion_mnist", **kwargs)
+
+    def _load(self):
+        import torchvision.datasets as datasets
+        import numpy as np
+
+        fashion_mnist = datasets.FashionMNIST(root="./data", train=True, download=True)
+        self.X = np.array(fashion_mnist.data).astype(np.float32)
+        self.X = self.X / 255.0  # Normalize to [0, 1]
+        self.X = self.X.reshape(self.X.shape[0], -1)  # Flatten the images
+        self.y = np.array(fashion_mnist.targets).astype(np.int64)
+
+
 @DatasetFactory.register("cifar10")
 class CIFAR10Dataset(BaseDataset):
     def __init__(self, **kwargs):
         super().__init__(name="cifar10", **kwargs)
 
-    def load(self):
+    def _load(self):
         import torchvision.datasets as datasets
         import numpy as np
 
@@ -339,7 +412,7 @@ class RiceDataset(BaseDataset):
     def __init__(self, **kwargs):
         super().__init__(name="rice", **kwargs)
 
-    def load(self):
+    def _load(self):
         from ucimlrepo import fetch_ucirepo
 
         rice = fetch_ucirepo(id=545)

@@ -1,3 +1,11 @@
+# This project
+data/
+checkpoints/
+logs/
+lightning_logs/
+results/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
