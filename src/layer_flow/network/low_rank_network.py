@@ -31,6 +31,7 @@ class LowRankDataLeftInitBlock(nn.Module):
         super(LowRankDataLeftInitBlock, self).__init__()
         self.A = nn.Linear(in_dim, rank)
         self.B = nn.Linear(rank, out_dim)
+        self.T = nn.Linear(rank, rank)
 
         with torch.no_grad():
             self.A.weight.copy_(low_rank_init)
@@ -41,7 +42,9 @@ class LowRankDataLeftInitBlock(nn.Module):
                 param.requires_grad = False
 
     def forward(self, x):
-        return self.B(self.A(x))
+        x = self.A(x)
+        x = self.T(x)
+        return self.B(x)
 
 
 class LowRankDataRightInitBlock(nn.Module):
@@ -49,6 +52,7 @@ class LowRankDataRightInitBlock(nn.Module):
         super(LowRankDataRightInitBlock, self).__init__()
         self.A = nn.Linear(in_dim, rank)
         self.B = nn.Linear(rank, out_dim)
+        self.T = nn.Linear(rank, rank)
 
         with torch.no_grad():
             self.B.weight.copy_(low_rank_init)
@@ -59,7 +63,9 @@ class LowRankDataRightInitBlock(nn.Module):
                 param.requires_grad = False
 
     def forward(self, x):
-        return self.B(self.A(x))
+        x = self.A(x)
+        x = self.T(x)
+        return self.B(x)
 
 
 class LowRankDataInitBlock(nn.Module):
@@ -75,6 +81,7 @@ class LowRankDataInitBlock(nn.Module):
         super(LowRankDataInitBlock, self).__init__()
         self.A = nn.Linear(in_dim, rank)
         self.B = nn.Linear(rank, out_dim)
+        self.T = nn.Linear(rank, rank)
 
         with torch.no_grad():
             self.A.weight.copy_(low_rank_init_left)
@@ -90,7 +97,9 @@ class LowRankDataInitBlock(nn.Module):
                 param.requires_grad = False
 
     def forward(self, x):
-        return self.B(self.A(x))
+        x = self.A(x)
+        x = self.T(x)
+        return self.B(x)
 
 
 class LowRankDataTransformInitBlock(nn.Module):

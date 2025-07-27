@@ -142,6 +142,7 @@ if __name__ == "__main__":
     # Run CV for all models
     hidden_dim = 1024
     rank = 32
+
     model = ModelConfig(
         name=f"{args.dataset}_network",
         config={
@@ -292,6 +293,164 @@ if __name__ == "__main__":
         },
     )
 
+    deep_model = ModelConfig(
+        name=f"{args.dataset}_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [nn.Linear] * 3,
+        },
+    )
+    deep_low_rank_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [lambda in_dim, out_dim: LowRankBlock(in_dim, out_dim, rank=rank)]
+            * 3,
+        },
+    )
+    deep_low_rank_transform_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_transform_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankTransformBlock(
+                    in_dim, out_dim, rank=rank
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_init_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_init_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init_left=get_landmarks(in_dim, rank).T,
+                    low_rank_init_right=get_landmarks(out_dim, rank),
+                    trainable=True,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_init_nontrainable_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_init_nontrainable_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init_left=get_landmarks(in_dim, rank).T,
+                    low_rank_init_right=get_landmarks(out_dim, rank),
+                    trainable=False,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_left_init_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_left_init_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataLeftInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(in_dim, rank).T,
+                    trainable=True,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_left_init_nontrainable_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_left_init_nontrainable_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataLeftInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(in_dim, rank).T,
+                    trainable=False,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_right_init_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_right_init_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataRightInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(out_dim, rank),
+                    trainable=True,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_right_init_nontrainable_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_right_init_nontrainable_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataRightInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(out_dim, rank),
+                    trainable=False,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_transform_init_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_transform_init_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataTransformInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(rank, rank),
+                    trainable=True,
+                )
+            ]
+            * 3,
+        },
+    )
+    deep_low_rank_data_transform_init_nontrainable_model = ModelConfig(
+        name=f"{args.dataset}_low_rank_data_transform_init_nontrainable_network",
+        config={
+            "hidden_dims": [hidden_dim] * 3,
+            "blocks": [
+                lambda in_dim, out_dim: LowRankDataTransformInitBlock(
+                    in_dim,
+                    out_dim,
+                    rank=rank,
+                    low_rank_init=get_landmarks(rank, rank),
+                    trainable=False,
+                )
+            ]
+            * 3,
+        },
+    )
+
     all_models = [
         model,
         low_rank_model,
@@ -304,6 +463,17 @@ if __name__ == "__main__":
         low_rank_data_right_init_nontrainable_model,
         low_rank_data_transform_init_model,
         low_rank_data_transform_init_nontrainable_model,
+        deep_model,
+        deep_low_rank_model,
+        deep_low_rank_transform_model,
+        deep_low_rank_data_init_model,
+        deep_low_rank_data_init_nontrainable_model,
+        deep_low_rank_data_left_init_model,
+        deep_low_rank_data_left_init_nontrainable_model,
+        deep_low_rank_data_right_init_model,
+        deep_low_rank_data_right_init_nontrainable_model,
+        deep_low_rank_data_transform_init_model,
+        deep_low_rank_data_transform_init_nontrainable_model,
     ]
 
     results = []
