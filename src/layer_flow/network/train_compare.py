@@ -294,14 +294,14 @@ if __name__ == "__main__":
     )
 
     deep_model = ModelConfig(
-        name=f"{args.dataset}_network",
+        name=f"{args.dataset}_deep_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [nn.Linear] * 3,
         },
     )
     deep_low_rank_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_network",
+        name=f"{args.dataset}_deep_low_rank_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [lambda in_dim, out_dim: LowRankBlock(in_dim, out_dim, rank=rank)]
@@ -309,7 +309,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_transform_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_transform_network",
+        name=f"{args.dataset}_deep_low_rank_transform_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -321,7 +321,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_init_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_init_network",
+        name=f"{args.dataset}_deep_low_rank_data_init_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -338,7 +338,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_init_nontrainable_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_init_nontrainable_network",
+        name=f"{args.dataset}_deep_low_rank_data_init_nontrainable_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -355,7 +355,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_left_init_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_left_init_network",
+        name=f"{args.dataset}_deep_low_rank_data_left_init_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -371,7 +371,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_left_init_nontrainable_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_left_init_nontrainable_network",
+        name=f"{args.dataset}_deep_low_rank_data_left_init_nontrainable_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -387,7 +387,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_right_init_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_right_init_network",
+        name=f"{args.dataset}_deep_low_rank_data_right_init_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -403,7 +403,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_right_init_nontrainable_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_right_init_nontrainable_network",
+        name=f"{args.dataset}_deep_low_rank_data_right_init_nontrainable_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -419,7 +419,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_transform_init_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_transform_init_network",
+        name=f"{args.dataset}_deep_low_rank_data_transform_init_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
@@ -435,7 +435,7 @@ if __name__ == "__main__":
         },
     )
     deep_low_rank_data_transform_init_nontrainable_model = ModelConfig(
-        name=f"{args.dataset}_low_rank_data_transform_init_nontrainable_network",
+        name=f"{args.dataset}_deep_low_rank_data_transform_init_nontrainable_network",
         config={
             "hidden_dims": [hidden_dim] * 3,
             "blocks": [
