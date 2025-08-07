@@ -2,6 +2,8 @@
 data/
 checkpoints/
 logs/
+logs_*/
+results_*/
 lightning_logs/
 results/
 

@@ -80,6 +80,16 @@ class BaseDataset:
             self.load()
 
     @property
+    def n_samples(self):
+        """
+        Get the number of samples in the dataset.
+
+        Returns:
+            int: The number of samples in the dataset.
+        """
+        return self.X.shape[0] if len(self.X.shape) > 0 else 1
+
+    @property
     def n_features(self):
         """
         Get the number of features in the dataset.
