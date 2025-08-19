@@ -377,12 +377,14 @@ class MNISTDataset(BaseDataset):
         super().__init__(name="mnist", **kwargs)
 
     def _load(self):
-        from sklearn.datasets import fetch_openml
+        import torchvision.datasets as datasets
+        import numpy as np
 
-        mnist = fetch_openml("mnist_784", version=1)
-        self.X = mnist.data.to_numpy().astype(np.float32)
-        self.X = self.X / 255.0
-        self.y = mnist.target.to_numpy()
+        mnist = datasets.MNIST(root="./data", train=True, download=True)
+        self.X = np.array(mnist.data).astype(np.float32)
+        self.X = self.X / 255.0  # Normalize to [0, 1]
+        self.X = self.X.reshape(self.X.shape[0], -1)  # Flatten the images
+        self.y = np.array(mnist.targets).astype(np.int64)
 
 
 @DatasetFactory.register("fashion_mnist")

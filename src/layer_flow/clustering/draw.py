@@ -33,6 +33,18 @@ from matplotlib.collections import LineCollection
 from scipy.spatial import ConvexHull, Voronoi
 
 
+def save_plot(fig, out_path: str) -> None:
+    """
+    Save the plot to the specified path.
+
+    Args:
+        fig (matplotlib.figure.Figure): The figure to save.
+        out_path (str): Path where the figure will be saved.
+    """
+    fig.savefig(out_path, bbox_inches="tight", dpi=300)
+    print(f"Plot saved to {out_path}")
+
+
 def plot_cluster_costs(points, centers, costs, ax=None):
     """
     Plot the points of the dataset with colors indicating their cost to the nearest center.

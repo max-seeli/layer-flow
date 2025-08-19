@@ -1,10 +1,17 @@
 from layer_flow.clustering.coreset_tree import coreset_tree
 from layer_flow.clustering.kmpp import kmpp
-from layer_flow.clustering.clustering import compute_cost_per_point, compute_clustering_cost, compute_entropy_per_cluster, compute_mean_uniformity
+from layer_flow.clustering.lloyd import lloyd
+from layer_flow.clustering.clustering import (
+    compute_cost_per_point,
+    compute_clustering_cost,
+    compute_entropy_per_cluster,
+    compute_mean_uniformity,
+)
 
 __all__ = [
     "coreset_tree",
     "kmpp",
+    "lloyd",
     "compute_cost_per_point",
     "compute_clustering_cost",
     "compute_entropy_per_cluster",

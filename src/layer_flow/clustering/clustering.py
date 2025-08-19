@@ -35,7 +35,9 @@ def compute_clustering_cost(points: np.ndarray, centers: np.ndarray) -> float:
     return np.sum(costs)
 
 
-def compute_entropy_per_cluster(points: np.ndarray, labels: np.ndarray, centers: np.ndarray, normalize: bool = False) -> np.ndarray:
+def compute_entropy_per_cluster(
+    points: np.ndarray, labels: np.ndarray, centers: np.ndarray, normalize: bool = False
+) -> np.ndarray:
     """
     Compute the entropy of each cluster, defined by the proximity the centers, based on the labels of the points.
 
@@ -48,11 +50,13 @@ def compute_entropy_per_cluster(points: np.ndarray, labels: np.ndarray, centers:
         np.ndarray: entropy for each center; shape (k,)
     """
     n_clusters = centers.shape[0]
-    
+
     entropies = np.zeros(n_clusters, dtype=np.float64)
 
     # Finding closest pairs like this is more efficient than broadcasting points via np.newaxis
-    closest_centers = np.argmin([np.sum((centers - point) ** 2, axis=1) for point in points], axis=1) 
+    closest_centers = np.argmin(
+        [np.sum((centers - point) ** 2, axis=1) for point in points], axis=1
+    )
 
     for i in range(n_clusters):
         cluster_points = points[closest_centers == i]
@@ -62,17 +66,21 @@ def compute_entropy_per_cluster(points: np.ndarray, labels: np.ndarray, centers:
             entropies[i] = 0.0
             continue
 
-        label_counts = np.bincount(cluster_labels.astype(int), minlength=np.max(labels) + 1)
+        label_counts = np.bincount(
+            cluster_labels.astype(int), minlength=np.max(labels) + 1
+        )
         probabilities = label_counts / np.sum(label_counts)
         entropies[i] = entropy(probabilities)
 
     if normalize:
-
         max_entropy = np.log(len(np.unique(labels)))
         entropies /= max_entropy
     return entropies
 
-def compute_mean_uniformity(points: np.ndarray, labels: np.ndarray, centers: np.ndarray) -> float:
+
+def compute_mean_uniformity(
+    points: np.ndarray, labels: np.ndarray, centers: np.ndarray
+) -> float:
     """
     Compute the mean uniformity of clusters based on the proximity to the centers.
 
@@ -87,6 +95,7 @@ def compute_mean_uniformity(points: np.ndarray, labels: np.ndarray, centers: np.
     entropies = 1 - compute_entropy_per_cluster(points, labels, centers, normalize=True)
     return np.mean(entropies)
 
+
 if __name__ == "__main__":
     # Example usage
     import time
@@ -95,7 +104,7 @@ if __name__ == "__main__":
     from layer_flow.clustering.draw import plot_cluster_costs, plot_cluster_hulls
     from layer_flow.data import DatasetFactory
 
-    ds = DatasetFactory.create("mnist", one_hot=False)#, num_blobs=4, one_hot=False)
+    ds = DatasetFactory.create("blobs", num_blobs=4, one_hot=False)
     points = ds.X
     labels = ds.y
 
@@ -105,13 +114,12 @@ if __name__ == "__main__":
     start_time = time.time()
     mean_uniformity = compute_mean_uniformity(points, labels, centers)
     end_time = time.time()
-    calc_time = end_time - start_time    
+    calc_time = end_time - start_time
 
     print("Time taken (compute_mean_uniformity):", calc_time)
 
     print("Mean uniformity:", mean_uniformity)
 
-    """
     start_time = time.time()
     cost_per_point = compute_cost_per_point(points, centers)
     end_time = time.time()
@@ -121,4 +129,3 @@ if __name__ == "__main__":
 
     plot_cluster_costs(points, centers, cost_per_point)
     plot_cluster_hulls(points, centers, labels)
-    """
